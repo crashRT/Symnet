@@ -17,7 +17,7 @@ object SEFLRunner {
 
   def main (args: Array[String]){
 
-    val (successful, failed) = t04
+    val (successful, failed) = t02
 
     output.println(
       successful.map(_.jsonString).mkString("Successful: {\n", "\n", "}\n") +
@@ -80,7 +80,11 @@ object SEFLRunner {
         CreateTag("IPSrc",Tag("L3HeaderStart")+96),
         Allocate(Tag("IPSrc"),32),
         CreateTag("IPDst",Tag("L3HeaderStart")+128),
-        Allocate(Tag("IPDst"),32)
+        Allocate(Tag("IPDst"),32),
+        Assign(Tag("IPDst"),ConstantValue(ipToNumber("192.0.2.1"))),
+        Assign(Tag("IPSrc"),SymbolicValue()),
+        Constrain(Tag("IPSrc"), :>=:(ConstantValue(ipToNumber("198.51.100.0")))),
+        Constrain(Tag("IPSrc"), :<=:(ConstantValue(ipToNumber("198.51.100.255"))))
       )
 
     code(State.clean, true)
