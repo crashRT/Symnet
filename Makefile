@@ -16,6 +16,10 @@ sh:
 	@echo "Opening shell in Symnet container..."
 	@docker exec -it symnet /bin/bash
 
+showok:
+	@echo "Showing running Symnet containers..."
+	cat sefl.output | grep "OK" | jq
+
 sample:
 	@echo "Running sample code in Symnet container..."
 	@docker exec symnet sbt sample
