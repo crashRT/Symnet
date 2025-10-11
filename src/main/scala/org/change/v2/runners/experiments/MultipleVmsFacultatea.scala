@@ -37,17 +37,24 @@ object MultipleVmsFacultatea {
 
     var crtExecutor = ctx
     var steps = 0
-    while(! crtExecutor.isDone && steps < 100) {
+    while(! crtExecutor.isDone) {
       steps += 1
       crtExecutor = crtExecutor.execute(verbose=true)
     }
 
     val doneExec = System.currentTimeMillis()
 
-//    val output = new PrintStream(new FileOutputStream(new File("facultatea.output")))
-//    output.println(crtExecutor.verboselyStringifyStates())
-//    output.close()
-//    println(s"Done, we spent ${startOfExec - startOfBuild} of code generation and ${doneExec - startOfExec} of execution.")
+        val (successful, failed) = (crtExecutor.stuckStates, crtExecutor.failedStates)
+
+    val output = new PrintStream(new FileOutputStream(new File("facultatea.output")))
+    output.println(
+      successful.map(_.jsonString).mkString("Successful: {\n", "\n", "},\n") +
+        failed.map(_.jsonString).mkString("Failed: {\n", "\n", "}\n")
+    )
+
+    output.close()
+    println(s"Done, we spent ${startOfExec - startOfBuild} of code generation and ${doneExec - startOfExec} of execution.")
+    println("Check output @ facultatea.output")
   }
 
 }

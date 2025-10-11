@@ -31,10 +31,14 @@ fullRunTask(click_exampl, Compile, "org.change.v2.runners.experiments.TemplateRu
 
 lazy val mc = taskKey[Unit]("Running multiple VMs")
 
-fullRunTask(mc, Compile, "org.change.v2.runners.experiments.MultipleVms")
+fullRunTask(mc, Compile, "org.change.v2.runners.experiments.MultipleVmsFacultatea")
 
 lazy val sefl = taskKey[Unit]("SEFL execution")
 
 fullRunTask(sefl, Compile, "org.change.v2.runners.sefl.SEFLExecutor")
+
+lazy val parseFIB = taskKey[Unit]("Run ParseForwardingTable")
+
+fullRunTask(parseFIB, Compile, "org.change.v2.abstractnet.optimizedrouter.ParseForwardingTable")
 
 seq(Revolver.settings: _*)
