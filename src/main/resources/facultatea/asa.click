@@ -8,8 +8,10 @@ pn_LABS_CS :: Paint(5);
 
 isTCP1 :: IPClassifier(tcp, udp,-);
 
-main_input[0] -> VLANDecap() -> EtherDecap() -> main_tee[0] -> [0]in_LABS_CS -> pn_LABS_CS;
+main_input[0] -> vlanclassifier :: IPClassifier(vlantag 304, -);
+vlanclassifier[0] ->  VLANDecap() -> EtherDecap() -> main_tee[0] -> [0]in_LABS_CS -> pn_LABS_CS;
                                                  pn_LABS_CS -> isTCP1;
+vlanclassifier[1] -> Discard;
 
 nat_cl_LABS_CS :: IPClassifier(src net 172.16.4.0/10,-);
 
