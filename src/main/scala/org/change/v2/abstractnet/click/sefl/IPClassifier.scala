@@ -38,6 +38,8 @@ class IPClassifier(name: String,
     case IPClassifier.etherSrc(macSrc) => ConstrainRaw(EtherSrc, :==:(ConstantValue(macToNumberCiscoFormat(macSrc))))
     case IPClassifier.etherDst(macDst) => ConstrainRaw(EtherDst, :==:(ConstantValue(macToNumberCiscoFormat(macDst))))
 
+    case IPClassifier.vlanTag(vlanId) => ConstrainRaw(VLANTag, :==:(ConstantValue(vlanId.toInt)))
+
     case IPClassifier.dstNetAddr(ip, mask) => {
       val (lower, upper) = ipAndMaskToInterval(ip, mask)
       ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper))))
@@ -151,6 +153,8 @@ object IPClassifier {
 
   val etherSrc = ("ether src (" + macCisco +")").r
   val etherDst = ("ether dst (" + macCisco +")").r
+
+  val vlanTag = ("vlantag (" + number + ")").r
 
   val tcp = "tcp".r
   val udp = "udp".r
