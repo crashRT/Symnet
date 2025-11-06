@@ -1,0 +1,11 @@
+rtx1210:lan1_o:0 -> poesw:port8_i:0
+poesw:port8_o:0 -> rtx1210:lan1_i:0
+
+poesw:port1_o:0 -> ap:wlan_i:0
+ap:wlan_o:0 -> poesw:port1_i:0
+
+ap:wifi1_o:0 -> host1:nic_i:0
+host1:nic_o:0 -> ap:wifi1_i:0
+
+ap:wifi2_o:0 -> host2:nic_i:0
+host2:nic_o:0 -> ap:wifi2_i:0
