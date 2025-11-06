@@ -1,25 +1,3 @@
-.PHONY: help up down build run shell logs clean
-
-up:
-	@echo "Starting Symnet container..."
-	@docker compose up -d
-
-down:
-	@echo "Stopping Symnet container..."
-	@docker compose down
-
-build:
-	@echo "Building Symnet container..."
-	docker build -t johscheuer/symnet .
-
-sh:
-	@echo "Opening shell in Symnet container..."
-	@docker exec -it symnet /bin/bash
-
-showok:
-	@echo "Showing running Symnet containers..."
-	cat sefl.output | grep "OK" | jq
-
-sample:
-	@echo "Running sample code in Symnet container..."
-	@docker exec symnet sbt sample
+run-%:
+	@echo "run ${@:run-%=%}"
+	@docker compose run --rm symnet sbt ${@:run-%=%}
