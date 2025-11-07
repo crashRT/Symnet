@@ -16,7 +16,7 @@ import org.change.parser.startpoints.StartPointParser
 object MultipleVms {
 
   def main(args: Array[String]) = {
-    val clicksFolder = new File("src/main/resources/click_test_files/multiple_files/trivial")
+    val clicksFolder = new File("src/main/resources/iwscnara")
 
     val clicks = clicksFolder.list(new FilenameFilter {
       override def accept(dir: File, name: String): Boolean = name.endsWith(".click")
@@ -26,9 +26,9 @@ object MultipleVms {
 
     val ctx = ClickExecutionContext.buildAggregated(
       clicks.map(ClickToAbstractNetwork.buildConfig(_, prefixedElements = true)),
-      InterClickLinksParser.parseLinks("src/main/resources/click_test_files/multiple_files/trivial/inter-click-links.links"),
+      InterClickLinksParser.parseLinks("src/main/resources/iwscnara/links.link"),
       startElems = Some(StartPointParser.parseStarts(
-        "src/main/resources/click_test_files/multiple_files/trivial/start.start"
+        "src/main/resources/iwscnara/start.start"
       ))
     )
 

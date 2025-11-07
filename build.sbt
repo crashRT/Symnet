@@ -31,7 +31,7 @@ fullRunTask(click_exampl, Compile, "org.change.v2.runners.experiments.TemplateRu
 
 lazy val mc = taskKey[Unit]("Running multiple VMs")
 
-fullRunTask(mc, Compile, "org.change.v2.runners.experiments.MultipleVmsFacultatea")
+fullRunTask(mc, Compile, "org.change.v2.runners.experiments.MultipleVms")
 
 lazy val sefl = taskKey[Unit]("SEFL execution")
 
