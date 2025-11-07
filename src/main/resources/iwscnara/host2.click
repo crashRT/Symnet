@@ -1,1 +1,2 @@
 host :: FromDevice() -> EtherEncap(2048, 0000.5e00.5312, 0000.5e00.5300) -> nic_o :: ToDevice()
+nic_i :: FromDevice() -> Null -> host_o :: ToDevice()

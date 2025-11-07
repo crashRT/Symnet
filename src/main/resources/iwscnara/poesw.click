@@ -4,7 +4,7 @@ port1_o :: ToDevice()
 port8_i :: FromDevice()
 port8_o :: ToDevice()
 
-vlan10 :: IPClassifier (ether dst 0000.5e00.5300, ether dst 0000.5e00.5310)
+vlan10 :: IPClassifier (ether dst 0000.5e00.5300, ether dst 0000.5e00.5311)
 vlan20 :: IPClassifier (ether dst 0000.5e00.5300, ether dst 0000.5e00.5312)
 
 tag :: IPClassifier(vlantag 10, vlantag 20, -)
