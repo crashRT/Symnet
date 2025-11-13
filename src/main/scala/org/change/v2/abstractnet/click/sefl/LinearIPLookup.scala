@@ -28,16 +28,21 @@ class LinearIPLookup(name: String,
         (split1(0), split1(1).toInt)
       }
 
-      val (ip, mask) = {
-        val split2 = ipmask.split("/")
-        (split2(0), split2(1))
+      // デフォルトルートの場合は条件なしで転送
+      if (ipmask == "0.0.0.0/0") {
+        Forward(outputPortName(port))
+      } else {
+        val (ip, mask) = {
+          val split2 = ipmask.split("/")
+          (split2(0), split2(1))
+        }
+
+        val (lower, upper) = RepresentationConversion.ipAndMaskToInterval(ip = ip, mask = mask)
+
+        If(Constrain(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))),
+          Forward(outputPortName(port)),
+          paramsToInstructions(rest))
       }
-
-      val (lower, upper) = RepresentationConversion.ipAndMaskToInterval(ip = ip, mask = mask)
-
-      If(Constrain(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))),
-        Forward(outputPortName(port)),
-        paramsToInstructions(rest))
     }
     case Nil => Fail("No route")
   }
