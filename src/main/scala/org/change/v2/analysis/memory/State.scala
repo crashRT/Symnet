@@ -47,10 +47,10 @@ object State {
 
      Allocate(IPSrc, 32),
      Assign(IPSrc, SymbolicValue()),
-     Constrain(IPSrc, :&:(:>=:(ConstantValue(0)), :<=:(ConstantValue(4294967296L)))),
+     Constrain(IPSrc, :&:(:>=:(ConstantValue(-2147483648L)), :<=:(ConstantValue(2147483647L)))),
      Allocate(IPDst, 32),
      Assign(IPDst, SymbolicValue()),
-     Constrain(IPDst, :&:(:>=:(ConstantValue(0)), :<=:(ConstantValue(4294967296L)))),
+     Constrain(IPDst, :&:(:>=:(ConstantValue(-2147483648L)), :<=:(ConstantValue(2147483647L)))),
 
      Allocate(TTL, 8),
      Assign(TTL, ConstantValue(255)),

@@ -2,8 +2,13 @@ package org.change.v2.util.conversion
 
 object RepresentationConversion {
 
+  // 2^31を定義
+  private val IP_OFFSET = 2147483648L
+
   def ipToNumber(ip: String): Long = {
-    ip.split("\\.").map(Integer.parseInt(_)).foldLeft(0L)((a:Long, g:Int)=> a * 256 + g)
+    val unsigned = ip.split("\\.").map(Integer.parseInt(_)).foldLeft(0L)((a:Long, g:Int)=> a * 256 + g)
+    // 符号付き整数の範囲に変換: IP値 - 2^31
+    unsigned - IP_OFFSET
   }
 
   def macToNumber(mac: String): Long = {
