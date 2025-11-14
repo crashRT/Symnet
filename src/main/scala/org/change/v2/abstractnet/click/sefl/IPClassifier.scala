@@ -35,6 +35,8 @@ class IPClassifier(name: String,
     case IPClassifier.srcHostAddr(ip) => ConstrainRaw(IPSrc, :==:(ConstantValue(ipToNumber(ip))))
     case IPClassifier.dstHostAddr(ip) => ConstrainRaw(IPDst, :==:(ConstantValue(ipToNumber(ip))))
 
+    case IPClassifier.nexthopAddr(ip) => ConstrainNamedSymbol("nexthop", :==:(ConstantValue(ipToNumber(ip))))
+
     case IPClassifier.etherSrc(macSrc) => ConstrainRaw(EtherSrc, :==:(ConstantValue(macToNumberCiscoFormat(macSrc))))
     case IPClassifier.etherDst(macDst) => ConstrainRaw(EtherDst, :==:(ConstantValue(macToNumberCiscoFormat(macDst))))
 
@@ -147,6 +149,8 @@ object IPClassifier {
   val dstHostAddr = ("dst host (" + ipv4 + ")").r
   val dstNetAddr = ("dst net (" + ipv4 + ")/(" + number + ")").r
   val dstNetExplicitAddr = ("dst net (" + ipv4 + ") mask (" + ipv4 + ")").r
+
+  val nexthopAddr = ("nexthop (" + ipv4 + ")").r
 
   val srcPort = ("src (tcp|udp) port (" + number + ")").r
   val dstPort = ("dst (tcp|udp) port (" + number + ")").r
