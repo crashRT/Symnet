@@ -6,7 +6,7 @@ lan1_o :: ToDevice();
 
 cpu :: Null
 
-routing :: LinearIPLookup(192.168.127.1/32 0, 192.168.127.0/24 1, 192.168.180.1/32 0, 192.168.180.0/22 2, 0.0.0.0/0 3)
+routing :: LinearIPLookup(192.168.127.1/32 0 onlink, 192.168.127.0/24 1 onlink, 192.168.180.1/32 0 onlink, 192.168.180.0/22 2 onlink, 0.0.0.0/0 3 10.0.0.1)
 
 vlan10 :: IPClassifier (ether dst 0000.5e00.5300, ether dst 0000.5e00.5311)
 

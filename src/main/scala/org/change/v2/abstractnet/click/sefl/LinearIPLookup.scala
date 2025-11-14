@@ -2,7 +2,8 @@ package org.change.v2.abstractnet.click.sefl
 
 import org.change.utils.RepresentationConversion
 import org.change.v2.abstractnet.generic.{ElementBuilder, GenericElement, ConfigParameter, Port}
-import org.change.v2.analysis.expression.concrete.ConstantValue
+import org.change.v2.analysis.expression.concrete._
+import org.change.v2.analysis.expression.concrete.nonprimitive._
 import org.change.v2.analysis.processingmodels._
 import org.change.v2.analysis.processingmodels.instructions._
 import org.change.v2.util.canonicalnames._
@@ -23,14 +24,18 @@ class LinearIPLookup(name: String,
 
   def paramsToInstructions(params: List[String]): Instruction = params match {
     case (param :: rest) => {
-      val (ipmask, port) = {
+      val (ipmask, port, nexthop) = {
         val split1 = param.split(" ")
-        (split1(0), split1(1).toInt)
+        (split1(0), split1(1).toInt, split1(2))
       }
 
       // デフォルトルートの場合は条件なしで転送
       if (ipmask == "0.0.0.0/0") {
-        Forward(outputPortName(port))
+        InstructionBlock(
+          Allocate("nexthop"),
+          Assign("nexthop", ConstantValue(RepresentationConversion.ipToNumber(nexthop))),
+          Forward(outputPortName(port))
+        )
       } else {
         val (ip, mask) = {
           val split2 = ipmask.split("/")
@@ -39,9 +44,25 @@ class LinearIPLookup(name: String,
 
         val (lower, upper) = RepresentationConversion.ipAndMaskToInterval(ip = ip, mask = mask)
 
-        If(Constrain(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))),
-          Forward(outputPortName(port)),
-          paramsToInstructions(rest))
+        if (nexthop == "onlink") {
+          If(Constrain(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))),
+            InstructionBlock(
+              Allocate("nexthop"),
+              Assign("nexthop", :@(IPDst)),
+              Forward(outputPortName(port))
+            ),
+            paramsToInstructions(rest)
+          )
+        } else {
+          If(Constrain(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))),
+            InstructionBlock(
+              Allocate("nexthop"),
+              Assign("nexthop", ConstantValue(RepresentationConversion.ipToNumber(nexthop))),
+              Forward(outputPortName(port))
+            ),
+            paramsToInstructions(rest)
+          )
+        }
       }
     }
     case Nil => Fail("No route")
