@@ -7,13 +7,13 @@ lan1_o :: ToDevice();
 cpu :: Null
 
 lan1_i -> lan1_tag :: IPClassifier(vlantag 10, vlantag 20, -)
-lan1_tag[0] -> VLANDecap() -> acl_vlan10_in
-lan1_tag[1] -> VLANDecap() -> vlan20
+lan1_tag[0] -> VLANDecap() -> vlan10
+lan1_tag[1] -> VLANDecap() -> acl_vlan20_in
 lan1_tag[2] -> VLANDecap() -> Discard
 
 lan3_i -> EtherDecap() -> routing
 
-acl_vlan10_in :: IPFilter( deny src 192.168.180.0/22 && dst 192.168.127.0/24, allow ip ) -> vlan10
+acl_vlan20_in :: IPFilter( deny src 192.168.180.0/22 && dst 192.168.127.0/24, allow ip ) -> vlan20
 
 vlan10 :: IPClassifier (ether dst 0000.5e00.5300, ether dst 0000.5e00.5311)
 vlan10[0] -> EtherDecap() -> routing
