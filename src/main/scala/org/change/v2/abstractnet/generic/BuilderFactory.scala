@@ -45,6 +45,7 @@ object BuilderFactory {
     case "IPFilter"  => IPFilter.getBuilder(nameValue)
     case "Paint" => Paint.getBuilder(nameValue)
     case "LinearIPLookup" => LinearIPLookup.getBuilder(nameValue)
+    case "HostIPAddress" => HostIPAddress.getBuilder(nameValue)
     case _ => NoOpClickElm.getBuilder(nameValue, elementType)
   }
   def getBuilder(elementType: String) = elementType match {
@@ -86,6 +87,7 @@ object BuilderFactory {
     case "IPFilter"  => IPFilter.getBuilder
     case "Paint"  => Paint.getBuilder
     case "LinearIPLookup" => LinearIPLookup.getBuilder
+    case "HostIPAddress" => HostIPAddress.getBuilder
     case _ => NoOpClickElm.getBuilder(elementType)
   }
 }
