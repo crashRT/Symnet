@@ -35,11 +35,10 @@ class HostIPAddress(name: String,
           )
         )
       // IPアドレス帯を指定の場合
-      case HostIPAddress.HostNetAddr(ip, mask) =>
-        val (lower, upper) = ipAndMaskToInterval(ip, mask)
+      case HostIPAddress.HostNetRange(lower, upper) =>
         Map(inputPortName(0) ->
           InstructionBlock(
-            ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))),
+            ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(ipToNumber(lower))), :<=:(ConstantValue(ipToNumber(upper))))),
             Forward(outputPortName(0))
           )
         )
@@ -61,7 +60,7 @@ class HostIPAddressElementBuilder(name: String, elementType: String)
 object HostIPAddress {
 
   val HostAddr = ("(" + ipv4 + ")").r
-  val HostNetAddr = ("(" + ipv4 + ")/(" + number + ")").r
+  val HostNetRange = ("(" + ipv4 + """)\s*-\s*(""" + ipv4 + ")").r
 
   private var unnamedCount = 0
 
