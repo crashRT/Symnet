@@ -2,6 +2,7 @@ package org.change.v2.abstractnet.generic
 
 import org.change.v2.Template
 import org.change.v2.abstractnet.click.sefl._
+import org.change.v2.abstractnet.click._
 
 object BuilderFactory {
 
@@ -41,7 +42,7 @@ object BuilderFactory {
     case "Template"  => Template.getBuilder(nameValue)
     case "AddTCPOptions"  => AddTCPOptions.getBuilder(nameValue)
     case "ScanTCPOptions"  => ScanTCPOptions.getBuilder(nameValue)
-    //    case "IPFilter"  => IPFilter.getBuilder(nameValue)
+    case "IPFilter"  => IPFilter.getBuilder(nameValue)
     case "Paint" => Paint.getBuilder(nameValue)
     case "LinearIPLookup" => LinearIPLookup.getBuilder(nameValue)
     case _ => NoOpClickElm.getBuilder(nameValue, elementType)
@@ -82,7 +83,7 @@ object BuilderFactory {
     case "Template"  => Template.getBuilder
     case "AddTCPOptions"  => AddTCPOptions.getBuilder
     case "ScanTCPOptions"  => ScanTCPOptions.getBuilder
-//    case "IPFilter"  => IPFilter.getBuilder
+    case "IPFilter"  => IPFilter.getBuilder
     case "Paint"  => Paint.getBuilder
     case "LinearIPLookup" => LinearIPLookup.getBuilder
     case _ => NoOpClickElm.getBuilder(elementType)
