@@ -98,6 +98,7 @@ class IPFilter(name: String,
       conditionsToInstruction(isAllow, conditions, rest)
 
     }
+    case Nil => Fail("implicit deny")
   }
 
   override def instructions: Map[LocationId, Instruction] = {
@@ -135,8 +136,8 @@ object IPFilter {
   val srcPort = ("src port ("+ number +")").r
   val dstPort = ("dst port ("+ number +")").r
 
-  val srcPortRange = ("src port ("+ number + ")-("+ number +")").r
-  val dstPortRange = ("dst port ("+ number + ")-("+ number +")").r
+  val srcPortRange = ("src port ("+ number + """)\s*-\s*("""+ number +")").r
+  val dstPortRange = ("dst port ("+ number + """)\s*-\s*("""+ number +")").r
   val any = """ip|any""".r
 
   private var unnamedCount = 0
