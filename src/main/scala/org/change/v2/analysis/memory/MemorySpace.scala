@@ -164,13 +164,6 @@ case class MemorySpace(val symbols: Map[String, MemoryObject] = Map.empty,
       case LTE_E(someE) if someE.id == subject.e.id => Some(newMem)
       case _ => {
         val result = memoryToOption(newMem)
-        if (result.isEmpty) {
-          println(s"[DEBUG] Constrain failed at offset $a")
-          println(s"[DEBUG] Constraint to add: $c")
-          println(s"[DEBUG] Current value expression: ${smb.e}")
-          println(s"[DEBUG] Existing constraints: ${smb.cts}")
-          println(s"[DEBUG] Z3 validity check failed")
-        }
         result
       }
     }
