@@ -1,8 +1,8 @@
-FROM openjdk:8-jdk-alpine
-MAINTAINER Johannes M. Scheuermann <ugene@student.kit.edu>
+FROM eclipse-temurin:8-jdk
 
-RUN apk --no-cache add ca-certificates wget openssl bash libgomp gcompat && \
-    update-ca-certificates
+RUN apt-get update && \
+    apt-get install -y wget bash libgomp1 && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN cd / && \
     wget https://github.com/sbt/sbt/releases/download/v0.13.18/sbt-0.13.18.tgz && \
@@ -14,7 +14,6 @@ COPY . /Symnet
 
 WORKDIR /Symnet
 
-RUN sbt compile && \
-    sbt sample
+RUN sbt compile
 
 CMD bash

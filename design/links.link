@@ -1,0 +1,12 @@
+client_a:client_a_uplink_out:0 -> naas:naas_client_a_port_in:0
+naas:naas_client_a_port_in:0 -> client_a:client_a_uplink_out:0
+client_b:client_b_uplink_out:0 -> naas:naas_client_b_port_in:0
+naas:naas_client_b_port_in:0 -> client_b:client_b_uplink_out:0
+naas:naas_client_a_port_out:0 -> client_a:client_a_uplink_in:0
+client_a:client_a_uplink_in:0 -> naas:naas_client_a_port_out:0
+naas:naas_client_b_port_out:0 -> client_b:client_b_uplink_in:0
+client_b:client_b_uplink_in:0 -> naas:naas_client_b_port_out:0
+naas:naas_server_port_out:0 -> server:server_naas_link_in:0
+server:server_naas_link_in:0 -> naas:naas_server_port_out:0
+server:server_naas_link_out:0 -> naas:naas_server_port_in:0
+naas:naas_server_port_in:0 -> server:server_naas_link_out:0

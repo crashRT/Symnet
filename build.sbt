@@ -41,4 +41,8 @@ lazy val parseFIB = taskKey[Unit]("Run ParseForwardingTable")
 
 fullRunTask(parseFIB, Compile, "org.change.v2.abstractnet.optimizedrouter.ParseForwardingTable")
 
+lazy val clickRunner = taskKey[Unit]("Run ClickRunner with a Click config file (pass args via system property)")
+
+fullRunTask(clickRunner, Compile, "org.change.v2.runners.experiments.ClickRunner")
+
 seq(Revolver.settings: _*)
