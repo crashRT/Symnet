@@ -47,7 +47,7 @@ object MosaicRunner {
       startElems = Some(List(startTuple))
     )
 
-    val done = ctx.untilDone(verbose = false)
+    val done = ctx.untilDone(verbose = true)
 
     import org.change.v2.analysis.memory.jsonformatters.ExecutionContextToJson._
 
