@@ -3,6 +3,7 @@ package org.change.v2.analysis.memory
 import org.change.v2.analysis.constraint._
 import org.change.v2.analysis.expression.abst.Expression
 import org.change.v2.analysis.expression.concrete.SymbolicValue
+import org.change.v2.analysis.expression.concrete.nonprimitive.Reference
 import org.change.v2.analysis.types.{LongType, NumericType, TypeUtils, Type}
 import org.change.v2.analysis.z3.Z3Util
 import org.change.v2.interval.{IntervalOps, ValueSet}
@@ -119,13 +120,13 @@ case class MemorySpace(val symbols: Map[String, MemoryObject] = Map.empty,
    * @param exp
    * @return
    */
-  def Assign(id: String, exp: Expression, eType: NumericType): Option[MemorySpace] = { assignNewValue(id, exp, eType) }
+  def Assign(id: String, exp: Expression, eType: NumericType): Option[MemorySpace] = { assignNewValue(id, valueForAssignment(exp, eType)) }
   def Assign(id: String, exp: Expression): Option[MemorySpace] = Assign(id, exp, TypeUtils.canonicalForSymbol(id))
   def Assign(a: Int, exp: Expression): Option[MemorySpace] = if (isAllocated(a))
     {
       val nm = Some(MemorySpace(
         symbols,
-        rawObjects + (a -> rawObjects(a).addValue(Value(exp))),
+        rawObjects + (a -> rawObjects(a).addValue(valueForAssignment(exp, LongType))),
         memTags
       ))
       nm
@@ -197,7 +198,12 @@ case class MemorySpace(val symbols: Map[String, MemoryObject] = Map.empty,
    * @param exp
    * @return
    */
-  def assignNewValue(id: String, exp: Expression, eType: NumericType): Option[MemorySpace] = assignNewValue(id, Value(exp, eType))
+  private def valueForAssignment(exp: Expression, eType: NumericType): Value = exp match {
+    case Reference(value) => Value(value.e, value.eType, value.cts)
+    case _ => Value(exp, eType)
+  }
+
+  def assignNewValue(id: String, exp: Expression, eType: NumericType): Option[MemorySpace] = assignNewValue(id, valueForAssignment(exp, eType))
 
   def assignNewValue(id: String, v: Value): Option[MemorySpace] =
     Some(MemorySpace(

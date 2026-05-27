@@ -1,7 +1,8 @@
-import org.change.v2.analysis.expression.concrete.nonprimitive.{Symbol, :+:}
+import org.change.v2.analysis.expression.concrete.nonprimitive.{Symbol, :+:, :@}
 import org.change.v2.analysis.expression.concrete.{ConstantValue, SymbolicValue}
 import org.change.v2.analysis.memory.{State, Value, MemorySpace}
 import org.change.v2.analysis.processingmodels.instructions._
+import org.change.v2.util.canonicalnames._
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -32,6 +33,35 @@ class InstructionTests extends FlatSpec with Matchers {
 
     afterState.memory.eval("IP-Clone") shouldBe a [Some[_]]
     afterState.memory.eval("IP").get.e.id shouldEqual afterState.memory.eval("IP-Clone").get.e.id
+  }
+
+  "Assign" should "copy constraints when assigning a direct symbol reference" in {
+    val (s,f) = InstructionBlock(List(
+      AssignNamedSymbol("IP", SymbolicValue()),
+      ConstrainNamedSymbol("IP", :&:(:>=:(ConstantValue(10)), :<=:(ConstantValue(20)))),
+      AssignNamedSymbol("IP-Clone", Symbol("IP"))
+    ))(State.bigBang)
+
+    val clone = s.head.memory.eval("IP-Clone").get
+
+    clone.e.id shouldEqual s.head.memory.eval("IP").get.e.id
+    clone.cts.map(_.toString) should contain ("&(List(>=([Const(10)]), <=([Const(20)])))")
+  }
+
+  "Assign" should "copy constraints when assigning a direct raw-field reference" in {
+    val (s,f) = InstructionBlock(List(
+      AssignRaw(TcpSrc, SymbolicValue()),
+      ConstrainRaw(TcpSrc, :&:(:>=:(ConstantValue(1000)), :<=:(ConstantValue(2000)))),
+      AssignNamedSymbol("SavedSrcPort", :@(TcpSrc)),
+      AssignRaw(TcpDst, Symbol("SavedSrcPort"))
+    ))(State.bigBang)
+
+    val saved = s.head.memory.eval("SavedSrcPort").get
+    val dst = s.head.memory.eval(TcpDst).get
+
+    saved.cts.map(_.toString) should contain ("&(List(>=([Const(1000)]), <=([Const(2000)])))")
+    dst.e.id shouldEqual saved.e.id
+    dst.cts.map(_.toString) should contain ("&(List(>=([Const(1000)]), <=([Const(2000)])))")
   }
 
   "Constrain" should "correctly add another constraint to a symbol" in {
