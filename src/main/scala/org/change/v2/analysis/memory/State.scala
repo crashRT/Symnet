@@ -15,11 +15,18 @@ import spray.json._
 case class State(memory: MemorySpace = MemorySpace.clean,
                  history: List[LocationId] = Nil,
                  errorCause: Option[ErrorCause] = None,
-                 instructionHistory: List[Instruction] = Nil) {
+                 instructionHistory: List[Instruction] = Nil,
+                 locationStates: Map[LocationId, List[MemorySpace]] = Map.empty) {
   def location: LocationId = history.head
-  def forwardTo(locationId: LocationId): State = State(memory, locationId :: history, errorCause, instructionHistory)
+  def forwardTo(locationId: LocationId): State = State(
+    memory,
+    locationId :: history,
+    errorCause,
+    instructionHistory,
+    locationStates + (locationId -> (memory :: locationStates.getOrElse(locationId, Nil)))
+  )
   def status = errorCause.getOrElse("OK")
-  def addInstructionToHistory(i: Instruction) = State(memory, history, errorCause, i :: instructionHistory)
+  def addInstructionToHistory(i: Instruction) = State(memory, history, errorCause, i :: instructionHistory, locationStates)
 
   def jsonString = {
     import org.change.v2.analysis.memory.jsonformatters.StateToJson._
