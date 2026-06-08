@@ -57,7 +57,7 @@ class InstructionTests extends FlatSpec with Matchers {
     ))(State.bigBang)
 
     val saved = s.head.memory.eval("SavedSrcPort").get
-    val dst = s.head.memory.eval(TcpDst).get
+    val dst = s.head.memory.eval(TcpDst(s.head).get).get
 
     saved.cts.map(_.toString) should contain ("&(List(>=([Const(1000)]), <=([Const(2000)])))")
     dst.e.id shouldEqual saved.e.id

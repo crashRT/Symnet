@@ -1,8 +1,12 @@
 package clickfiletoexecutor
 
+import org.change.utils.RepresentationConversion
 import org.change.parser.clickfile.ClickToAbstractNetwork
 import org.change.v2.analysis.expression.concrete.ConstantValue
+import org.change.v2.analysis.memory.State
+import org.change.v2.analysis.processingmodels.instructions._
 import org.change.v2.executor.clickabstractnetwork._
+import org.change.v2.util.canonicalnames._
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -50,6 +54,22 @@ class ClickToExecutorTests extends FlatSpec with Matchers {
     val executor = ClickExecutionContext.fromSingle(absNet)
 
     executor shouldBe a [ClickExecutionContext]
+  }
+
+  "Loop detection" should "include constant assignments in IP packet-space comparison" in {
+    val targetIp = RepresentationConversion.ipToNumber("10.0.0.1")
+    val otherIp = RepresentationConversion.ipToNumber("10.0.0.2")
+
+    val oldState = InstructionBlock(
+      Constrain(IPDst, :==:(ConstantValue(targetIp)))
+    )(State.bigBang, true)._1.head
+    val oldMem = oldState.memory
+    val ipDstOffset = IPDst(oldState).get
+    val sameConstantNewMem = oldMem.Assign(ipDstOffset, ConstantValue(targetIp)).get
+    val differentConstantNewMem = oldMem.Assign(ipDstOffset, ConstantValue(otherIp)).get
+
+    ClickExecutionContext.isIpForwardingLoop(oldMem, sameConstantNewMem) should be (true)
+    ClickExecutionContext.isIpForwardingLoop(oldMem, differentConstantNewMem) should be (false)
   }
 
 }

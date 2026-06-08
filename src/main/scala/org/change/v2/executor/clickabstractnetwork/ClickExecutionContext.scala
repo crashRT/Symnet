@@ -70,12 +70,12 @@ case class ClickExecutionContext(
       val r3 = toCheck.map(s => checkInstructions(s.location)(s,verbose)).unzip
 
       // 2. Forward packet, if a link from this port location exists.
-      // Detect forwarding/L2 loops via Z3 subsumption on IP src/dst fields:
+      // Detect forwarding loops via Z3 subsumption on IP src/dst fields:
       // When revisiting a location, check if !n & o is unsatisfiable for
       // IPSrc/IPDst (new state's IP space subsumes old state's IP space → loop).
-      // This handles routing loops with TTL decrement or SNAT correctly because
-      // TTL/source changes do not affect the IPDst-based routing decision.
-      // DNAT redirects (IPDst changes) are correctly NOT flagged as loops.
+      // This handles traditional routing loops with TTL decrement because TTL
+      // is intentionally outside the compared packet space. NAT/rewrites that
+      // change source or destination addresses change the compared state.
       val (candidateOkStates, loopFailedStates) =
         (r2 ++ r3._1.flatten).foldLeft((List.empty[State], List.empty[State])) {
           case ((cands, loops), s) =>
@@ -126,52 +126,55 @@ object ClickExecutionContext {
   private val IpSrcRelOffset = 96
   private val IpDstRelOffset = 128
 
+  private val ComparedIpFields = Seq(
+    (IpSrcRelOffset, "IPSrc"),
+    (IpDstRelOffset, "IPDst")
+  )
+
   /**
-   * Check whether the IP src/dst packet space of newMem is subsumed by oldMem,
-   * i.e. whether !n & o is unsatisfiable for IPSrc/IPDst fields.
+   * Check whether the IP src/dst packet space of oldMem is contained in newMem,
+   * i.e. whether old & !new is unsatisfiable for IPSrc/IPDst fields.
    *
-   * If unsatisfiable: every packet matching old also matches new → the routing
-   * decision hasn't changed → forwarding/L2 loop detected.
+   * The formula for each field includes both the current value expression
+   * (field == expression) and the expression constraints. This matters for
+   * rewrites to constants, which carry no constraints but still define a
+   * singleton packet space.
    *
-   * Returns false (no loop) when either state has no IP constraints (insufficient
-   * information) or when the IP destination has changed (e.g. DNAT redirect).
+   * If unsatisfiable: every packet matching old also matches new → loop.
+   * Returns false when either state lacks the compared IP fields.
    */
   def isIpForwardingLoop(oldMem: MemorySpace, newMem: MemorySpace): Boolean = {
     val ctx = Z3Util.z3Context
 
-    // Resolve absolute offsets of IPSrc/IPDst using the L3 memory tag
-    val l3Base = oldMem.memTags.getOrElse("L3", 0)
-    val ipFieldAbsOffsets = Seq(l3Base + IpSrcRelOffset, l3Base + IpDstRelOffset)
-
-    // Collect Z3 ASTs for IP field constraints from a memory space
-    def ipConstraintASTs(mem: MemorySpace): Seq[Z3AST] =
-      ipFieldAbsOffsets.flatMap { offset =>
+    def ipFieldFormula(mem: MemorySpace, relOffset: Int, fieldName: String): Option[Z3AST] =
+      mem.memTags.get("L3").flatMap { l3Base =>
+        val offset = l3Base + relOffset
         for {
           mo <- mem.rawObjects.get(offset)
           v  <- mo.value
-          if v.cts.nonEmpty
         } yield {
-          val (ast, _) = v.e.toZ3()
-          val conjuncts = v.cts.map(_.z3Constrain(ast))
-          if (conjuncts.size == 1) conjuncts.head
-          else ctx.mkAnd(conjuncts: _*)
+          val fieldAst = ctx.mkConst(s"loop-detection-$fieldName", Z3Util.defaultSort)
+          val (valueAst, _) = v.e.toZ3()
+          val clauses = ctx.mkEq(fieldAst, valueAst) :: v.cts.map(_.z3Constrain(valueAst))
+          ctx.mkAnd(clauses: _*)
         }
       }
 
-    val oldConstraints = ipConstraintASTs(oldMem)
-    if (oldConstraints.isEmpty) return false  // no IP info → can't determine
+    def ipStateFormula(mem: MemorySpace): Option[Z3AST] = {
+      val fieldFormulas = ComparedIpFields.map {
+        case (relOffset, fieldName) => ipFieldFormula(mem, relOffset, fieldName)
+      }
+      if (fieldFormulas.exists(_.isEmpty)) None
+      else Some(ctx.mkAnd(fieldFormulas.flatten: _*))
+    }
 
-    val newConstraints = ipConstraintASTs(newMem)
-    // Unconstrained new state covers everything → old ⊆ new → loop
-    if (newConstraints.isEmpty) return true
+    val oldFormula = ipStateFormula(oldMem).getOrElse(return false)
+    val newFormula = ipStateFormula(newMem).getOrElse(return false)
 
     // Check: old AND NOT(new) is unsatisfiable?
     val solver = Z3Util.solver
-    oldConstraints.foreach(solver.assertCnstr)
-    val newConjunction =
-      if (newConstraints.size == 1) newConstraints.head
-      else ctx.mkAnd(newConstraints: _*)
-    solver.assertCnstr(ctx.mkNot(newConjunction))
+    solver.assertCnstr(oldFormula)
+    solver.assertCnstr(ctx.mkNot(newFormula))
     solver.check() == Some(false)
   }
 
