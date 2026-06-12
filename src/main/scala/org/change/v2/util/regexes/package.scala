@@ -9,6 +9,9 @@ package object regexes {
   val ipv4 = """[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}"""
   val ipv4Regex = ipv4.r
 
+  val ipv4Interval = s"$ipv4\\s*-\\s*$ipv4"
+  val ipv4IntervalRegexWithGroups = s"($ipv4)\\s*-\\s*($ipv4)".r
+
   val ipv4netmask = """[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}"""
   val ipv4netmaskRegex = ipv4netmask.r
 

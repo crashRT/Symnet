@@ -37,9 +37,17 @@ class IPRewriter(name: String,
       AssignNamedSymbol(s"$name-$whichRule-check-dp", Address(TcpDst)),
       AssignNamedSymbol(s"$name-$whichRule-check-proto", Address(Proto)),
       // Apply patterns
-      AssignNamedSymbol(s"$name-$whichRule-apply-sa", sAddr match {
-        case ipv4Regex() => ConstantValue(ipToNumber(sAddr))
-        case _ => Address(IPSrc)
+      (sAddr match {
+        case ipv4Regex() =>
+          AssignNamedSymbol(s"$name-$whichRule-apply-sa", ConstantValue(ipToNumber(sAddr)))
+        case ipv4IntervalRegexWithGroups(startIp, endIp) =>
+          InstructionBlock(
+            AssignNamedSymbol(s"$name-$whichRule-apply-sa", SymbolicValue()),
+            ConstrainNamedSymbol(s"$name-$whichRule-apply-sa",
+              :&:(:>=:(ConstantValue(ipToNumber(startIp))), :<=:(ConstantValue(ipToNumber(endIp)))))
+          )
+        case _ =>
+          AssignNamedSymbol(s"$name-$whichRule-apply-sa", Address(IPSrc))
       }),
       AssignNamedSymbol(s"$name-$whichRule-apply-da", dAddr match {
         case ipv4Regex() => ConstantValue(ipToNumber(dAddr))
@@ -67,9 +75,17 @@ class IPRewriter(name: String,
     // Second installed mapping (backwards)
     val bkMapping = InstructionBlock(
       // Check patterns
-      AssignNamedSymbol(s"$name-${whichRule+1}-check-da", sAddr match {
-        case ipv4Regex() => ConstantValue(ipToNumber(sAddr))
-        case _ => Address(IPSrc)
+      (sAddr match {
+        case ipv4Regex() =>
+          AssignNamedSymbol(s"$name-${whichRule+1}-check-da", ConstantValue(ipToNumber(sAddr)))
+        case ipv4IntervalRegexWithGroups(startIp, endIp) =>
+          InstructionBlock(
+            AssignNamedSymbol(s"$name-${whichRule+1}-check-da", SymbolicValue()),
+            ConstrainNamedSymbol(s"$name-${whichRule+1}-check-da",
+              :&:(:>=:(ConstantValue(ipToNumber(startIp))), :<=:(ConstantValue(ipToNumber(endIp)))))
+          )
+        case _ =>
+          AssignNamedSymbol(s"$name-${whichRule+1}-check-da", Address(IPSrc))
       }),
       AssignNamedSymbol(s"$name-${whichRule+1}-check-sa", dAddr match {
         case ipv4Regex() => ConstantValue(ipToNumber(dAddr))
@@ -247,7 +263,7 @@ class IPRewriterElementBuilder(name: String)
 object IPRewriter {
   val passPattern = ("pass (" + number+ ")").r
   val keepPattern = ("keep (" + number+ ") (" + number+ ")").r
-  val addrPattern = ipv4+ "|-"
+  val addrPattern = ipv4Interval + "|" + ipv4 + "|-"
   val portPattern = number + "\\s*-\\s*" + number + "|-|" + number
   val rewritePattern = ("pattern (" + addrPattern + ") (" + portPattern + ") (" + addrPattern + ") (" +
     portPattern + ") (" + number + ") (" + number + ")").r
