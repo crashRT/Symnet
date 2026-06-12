@@ -42,6 +42,11 @@ class IPClassifier(name: String,
 
     case IPClassifier.vlanTag(vlanId) => ConstrainRaw(VLANTag, :==:(ConstantValue(vlanId.toInt)))
 
+    case IPClassifier.srcNetRange(startIp, endIp) =>
+      ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(ipToNumber(startIp))), :<=:(ConstantValue(ipToNumber(endIp)))))
+    case IPClassifier.dstNetRange(startIp, endIp) =>
+      ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(ipToNumber(startIp))), :<=:(ConstantValue(ipToNumber(endIp)))))
+
     case IPClassifier.dstNetAddr(ip, mask) => {
       val (lower, upper) = ipAndMaskToInterval(ip, mask)
       ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper))))
@@ -143,10 +148,12 @@ object IPClassifier {
   val ipProto = ("ip proto (" + number + ")").r
 
   val srcHostAddr = ("src host (" + ipv4 + ")").r
+  val srcNetRange = ("src net (" + ipv4 + ")\\s*-\\s*(" + ipv4 + ")").r
   val srcNetAddr = ("src net (" + ipv4 + ")/(" + number + ")").r
   val srcNetExplicitAddr = ("src net (" + ipv4 + ") mask (" + ipv4 + ")").r
 
   val dstHostAddr = ("dst host (" + ipv4 + ")").r
+  val dstNetRange = ("dst net (" + ipv4 + ")\\s*-\\s*(" + ipv4 + ")").r
   val dstNetAddr = ("dst net (" + ipv4 + ")/(" + number + ")").r
   val dstNetExplicitAddr = ("dst net (" + ipv4 + ") mask (" + ipv4 + ")").r
 
