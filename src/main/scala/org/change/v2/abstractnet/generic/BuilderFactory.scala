@@ -18,6 +18,8 @@ object BuilderFactory {
     //    case "Server"  => Server.getBuilder(nameValue)
     case "Tee" => Tee.getBuilder(nameValue)
     case "Discard" => Discard.getBuilder(nameValue)
+    case "SilentDrop" => SilentDrop.getBuilder(nameValue)
+    case "ContractViolation" => ContractViolation.getBuilder(nameValue)
     case "ClampMTU" => ClampMTU.getBuilder(nameValue)
     case "DHCPSetState" => DHCPSetState.getBuilder(nameValue)
     case "DHCPCheckState" => DHCPCheckState.getBuilder(nameValue)
@@ -60,6 +62,8 @@ object BuilderFactory {
 //    case "Server" => Server.getBuilder
     case "Tee" => Tee.getBuilder
     case "Discard" => Discard.getBuilder
+    case "SilentDrop" => SilentDrop.getBuilder
+    case "ContractViolation" => ContractViolation.getBuilder
     case "ClampMTU" => ClampMTU.getBuilder
     case "DHCPSetState" => DHCPSetState.getBuilder
     case "DHCPCheckState" => DHCPCheckState.getBuilder
