@@ -46,6 +46,7 @@ object BuilderFactory {
     case "ScanTCPOptions"  => ScanTCPOptions.getBuilder(nameValue)
     case "IPFilter"  => IPFilter.getBuilder(nameValue)
     case "Paint" => Paint.getBuilder(nameValue)
+    case "SetNamedSymbol" => SetNamedSymbol.getBuilder(nameValue)
     case "LinearIPLookup" => LinearIPLookup.getBuilder(nameValue)
     case "HostIPAddress" => HostIPAddress.getBuilder(nameValue)
     case _ => NoOpClickElm.getBuilder(nameValue, elementType)
@@ -90,6 +91,7 @@ object BuilderFactory {
     case "ScanTCPOptions"  => ScanTCPOptions.getBuilder
     case "IPFilter"  => IPFilter.getBuilder
     case "Paint"  => Paint.getBuilder
+    case "SetNamedSymbol" => SetNamedSymbol.getBuilder
     case "LinearIPLookup" => LinearIPLookup.getBuilder
     case "HostIPAddress" => HostIPAddress.getBuilder
     case _ => NoOpClickElm.getBuilder(elementType)
