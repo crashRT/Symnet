@@ -2,6 +2,7 @@ services:
   symnet:
     build: .
     image: mosaic/symnet:latest
+    mem_limit: 12g
     container_name: symnet
     working_dir: /Symnet
     volumes:
