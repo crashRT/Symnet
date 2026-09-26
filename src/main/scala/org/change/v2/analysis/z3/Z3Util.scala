@@ -1,6 +1,6 @@
 package org.change.v2.analysis.z3
 
-import z3.scala.{Z3Context, Z3Config}
+import z3.scala.{Z3Context, Z3Config, Z3Solver}
 
 /**
  * Author: Radu Stoenescu
@@ -12,11 +12,14 @@ object Z3Util {
 
   private lazy val intSort = z3Context.mkIntSort()
 
-  /**
-   * OPTIMIZE
-   * @return
-   */
-  def solver = z3Context.mkSolver()
+  private lazy val sharedSolver = z3Context.mkSolver()
+
+  /** Run one isolated query without allocating another retained Z3Solver. */
+  def withSolver[A](query: Z3Solver => A): A = sharedSolver.synchronized {
+    sharedSolver.push()
+    try query(sharedSolver)
+    finally sharedSolver.pop()
+  }
 
   lazy val defaultSort = intSort
   lazy val bv32Sort = z3Context.mkBVSort(32)

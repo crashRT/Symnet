@@ -241,31 +241,25 @@ case class MemorySpace(val symbols: Map[String, MemoryObject] = Map.empty,
 
   def valid: Boolean = isZ3Valid
 
-  def buildSolver: Z3Solver = if (isZ3SolverCacheValid)
-    solverCache
-  else {
-    solverCache = (symbols.values ++ rawObjects.values).foldLeft(Z3Util.solver) { (slv, mo) =>
-      mo.value match {
-        case Some(v) => v.toZ3(Some(slv))._2.get
-        case _ => slv
-      }
-    }
-    isZ3SolverCacheValid = true
-    solverCache
-  }
-
-
-  private var isZ3SolverCacheValid = false
-  private var solverCache: Z3Solver = _
   private var isZ3ModelCacheValid = false
   private var modelCache: Option[Z3Model] = _
 
-  def isZ3Valid: Boolean = buildSolver.check().get
+  private def withBuiltSolver[A](query: Z3Solver => A): A =
+    Z3Util.withSolver { solver =>
+      (symbols.values ++ rawObjects.values).foreach { mo =>
+        mo.value.foreach(_.toZ3(Some(solver)))
+      }
+      query(solver)
+    }
+
+  def isZ3Valid: Boolean = withBuiltSolver(_.check().get)
 
   def buildModel: Option[Z3Model] = if (isZ3ModelCacheValid)
     modelCache
   else {
-    modelCache = if (buildSolver.check().get) Some(buildSolver.getModel()) else None
+    modelCache = withBuiltSolver { solver =>
+      if (solver.check().get) Some(solver.getModel()) else None
+    }
     isZ3ModelCacheValid = true
     modelCache
   }
@@ -275,7 +269,7 @@ case class MemorySpace(val symbols: Map[String, MemoryObject] = Map.empty,
   def exampleFor(a: Int): Option[Int] = resolveBy(a, rawObjects).flatMap(exampleFor(_))
 
   def exampleFor(v: Value): Option[Int] = buildModel.flatMap(m => {
-    val e = m.evalAs[Int](v.e.toZ3(Some(buildSolver))._1)
+    val e = m.evalAs[Int](v.e.toZ3()._1)
     e
   })
 

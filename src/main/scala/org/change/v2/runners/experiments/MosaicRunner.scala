@@ -1,10 +1,10 @@
 package org.change.v2.runners.experiments
 
-import java.io.{File, FileOutputStream, FilenameFilter, PrintWriter}
+import java.io.{File, FilenameFilter}
 import org.change.parser.clickfile.ClickToAbstractNetwork
 import org.change.parser.interclicklinks.InterClickLinksParser
+import org.change.v2.analysis.memory.jsonformatters.StreamingExecutionContextToJson
 import org.change.v2.executor.clickabstractnetwork.ClickExecutionContext
-import spray.json._
 
 object MosaicRunner {
   def main(args: Array[String]): Unit = {
@@ -47,20 +47,13 @@ object MosaicRunner {
       startElems = Some(List(startTuple))
     )
 
-    val done = ctx.untilDone(verbose = true)
-
-    import org.change.v2.analysis.memory.jsonformatters.ExecutionContextToJson._
-
     val outputFile = new File(outputPath)
-    val outputParent = outputFile.getParentFile
-    if (outputParent != null) {
-      outputParent.mkdirs()
-    }
+    val summary = StreamingExecutionContextToJson.executeToFile(
+      ctx, outputFile, verbose = true)
 
-    val out = new PrintWriter(new FileOutputStream(outputFile))
-    out.println(done.toJson.prettyPrint)
-    out.close()
-
+    println(
+      s"SymNet finalized states: ${summary.successfulStateCount} successful, " +
+      s"${summary.failedStateCount} failed")
     println(s"SymNet results written to ${outputFile.getPath}")
   }
 }

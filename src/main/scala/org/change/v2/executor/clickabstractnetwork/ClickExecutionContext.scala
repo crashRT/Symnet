@@ -172,10 +172,11 @@ object ClickExecutionContext {
     val newFormula = ipStateFormula(newMem).getOrElse(return false)
 
     // Check: old AND NOT(new) is unsatisfiable?
-    val solver = Z3Util.solver
-    solver.assertCnstr(oldFormula)
-    solver.assertCnstr(ctx.mkNot(newFormula))
-    solver.check() == Some(false)
+    Z3Util.withSolver { solver =>
+      solver.assertCnstr(oldFormula)
+      solver.assertCnstr(ctx.mkNot(newFormula))
+      solver.check() == Some(false)
+    }
   }
 
   /**
