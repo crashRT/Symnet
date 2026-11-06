@@ -4,6 +4,7 @@ import org.change.v2.abstractnet.generic.{ConfigParameter, ElementBuilder, Gener
 import org.change.v2.analysis.expression.concrete._
 import org.change.v2.analysis.processingmodels._
 import org.change.v2.analysis.processingmodels.instructions._
+import org.change.v2.analysis.memory.Intable
 import org.change.v2.util.canonicalnames._
 import org.change.v2.util.conversion.NumberFor
 import org.change.v2.util.conversion.RepresentationConversion._
@@ -24,10 +25,26 @@ class IPClassifier(name: String,
 
   /**
    * The method takes an atomic tcpdump condition and creates it's associated constraint.
+   *
+   * Extension to the tcpdump syntax: an atom that takes one value (`src net`,
+   * `dst net`, `src host`, `dst host`, `src|dst tcp|udp port`, `vlantag`,
+   * `ether src`, `ether dst`) may list several space-separated values, e.g.
+   * `dst net 10.0.0.0/8 172.16.0.0/12 192.0.2.10-192.0.2.20`.  The atom then
+   * matches when the field equals any of the values, and becomes a single
+   * `ConstrainRaw` whose constraint is the OR of the per-value constraints.
+   * Because the OR stays inside one header field, it never needs to be split
+   * into several branches.  A single value keeps the original meaning.
+   *
    * @param condition
    * @return
    */
-  private def conditionToConstraint(condition: String): Instruction = condition match {
+  private def conditionToConstraint(condition: String): Instruction =
+    IPClassifier.valueListConstraint(name, condition) match {
+      case Some(instr) => instr
+      case None => singleValueConditionToConstraint(condition)
+    }
+
+  private def singleValueConditionToConstraint(condition: String): Instruction = condition match {
     case IPClassifier.color(v) => ConstrainNamedSymbol(Paint.COLOR, :==:(ConstantValue(v.toInt)))
 
     case IPClassifier.ipProto(v) => ConstrainRaw(IPVersion, :==:(ConstantValue(v.toInt)))
@@ -70,6 +87,8 @@ class IPClassifier(name: String,
     case IPClassifier.tcp() => ConstrainRaw(Proto, :==:(ConstantValue(TCPProto)))
     case IPClassifier.udp() => ConstrainRaw(Proto, :==:(ConstantValue(UDPProto)))
 
+    case _ => throw new IllegalArgumentException(
+      s"IPClassifier $name: unsupported condition '$condition'")
   }
 
   val portToInstr = scala.collection.mutable.Map[Int, Instruction]()
@@ -166,6 +185,85 @@ object IPClassifier {
   val etherDst = ("ether dst (" + macCisco +")").r
 
   val vlanTag = ("vlantag (" + number + ")").r
+
+  /**
+   * Qualifier of an atom that accepts a list of values, followed by the values.
+   */
+  private val valueListAtom =
+    """(src net|dst net|src host|dst host|(?:src|dst) (?:tcp|udp) port|vlantag|ether src|ether dst)\s+(.+)""".r
+
+  /**
+   * Split a value list into values.  The Click config grammar joins tokens
+   * with single spaces, so `1.2.3.4-5.6.7.8` arrives as `1.2.3.4 - 5.6.7.8`;
+   * the spacing around interval dashes is removed first (same rule as
+   * `SetNamedSymbol`).
+   */
+  def valuesOf(values: String): List[String] = values
+    .replaceAll("\\s*-\\s*", "-")
+    .split("\\s+")
+    .filter(_.nonEmpty)
+    .toList
+
+  private def rangeConstraint(lower: Long, upper: Long): FloatingConstraint =
+    :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))
+
+  private def netValueConstraint(value: String): Option[FloatingConstraint] = value match {
+    case ipv4netmaskRegex() =>
+      val parts = value.split("/")
+      val (lower, upper) = ipAndMaskToInterval(parts(0), parts(1))
+      Some(rangeConstraint(lower, upper))
+    case ipv4IntervalRegexWithGroups(start, end) =>
+      Some(rangeConstraint(ipToNumber(start), ipToNumber(end)))
+    case _ => None
+  }
+
+  private def hostValueConstraint(value: String): Option[FloatingConstraint] = value match {
+    case ipv4Regex() => Some(:==:(ConstantValue(ipToNumber(value))))
+    case _ => None
+  }
+
+  private def numberValueConstraint(value: String): Option[FloatingConstraint] = value match {
+    case numberRegex() => Some(:==:(ConstantValue(value.toLong)))
+    case _ => None
+  }
+
+  private def macValueConstraint(value: String): Option[FloatingConstraint] = value match {
+    case macCiscoRegex() => Some(:==:(ConstantValue(macToNumberCiscoFormat(value))))
+    case _ => None
+  }
+
+  /**
+   * Builds the constraint of an atom carrying two or more values.  Returns
+   * `None` when the condition is not a value-list atom (or carries only one
+   * value), in which case the single-value rules apply unchanged.  Throws when
+   * a value in a list cannot be interpreted.
+   */
+  def valueListConstraint(elementName: String, condition: String): Option[Instruction] =
+    condition.trim match {
+      case valueListAtom(qualifier, rest) =>
+        val values = valuesOf(rest)
+        // `src net A mask M` is a single value containing spaces.
+        if (values.length < 2 || values.contains("mask")) None
+        else {
+          val (field, parse): (Intable, String => Option[FloatingConstraint]) = qualifier match {
+            case "src net" => (IPSrc, netValueConstraint)
+            case "dst net" => (IPDst, netValueConstraint)
+            case "src host" => (IPSrc, hostValueConstraint)
+            case "dst host" => (IPDst, hostValueConstraint)
+            case "vlantag" => (VLANTag, numberValueConstraint)
+            case "ether src" => (EtherSrc, macValueConstraint)
+            case "ether dst" => (EtherDst, macValueConstraint)
+            case q if q.startsWith("src ") => (TcpSrc, numberValueConstraint)
+            case _ => (TcpDst, numberValueConstraint)
+          }
+          val constraints = values.map { value =>
+            parse(value).getOrElse(throw new IllegalArgumentException(
+              s"IPClassifier $elementName: unsupported value '$value' in condition '$condition'"))
+          }
+          Some(ConstrainRaw(field, :||:(constraints)))
+        }
+      case _ => None
+    }
 
   val tcp = "tcp".r
   val udp = "udp".r

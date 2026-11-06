@@ -64,6 +64,20 @@ case class :|:(a: FloatingConstraint, b: FloatingConstraint) extends FloatingCon
   }
 }
 
+/**
+ * N-ary disjunction.  Unlike nesting `:|:`, it instantiates to one flat
+ * `OR(List(c1, c2, ...))`, which keeps the printed constraint readable.
+ */
+case class :||:(constraints: List[FloatingConstraint]) extends FloatingConstraint {
+  override def instantiate(s: State): Either[Constraint, String] = {
+    val instantiated = constraints.map(_ instantiate s)
+    instantiated.collectFirst { case err @ Right(_) => err } match {
+      case Some(err) => err
+      case None => Left(OR(instantiated.collect { case Left(c) => c }))
+    }
+  }
+}
+
 case class :&:(a: FloatingConstraint, b: FloatingConstraint) extends FloatingConstraint {
   override def instantiate(s: State): Either[Constraint, String] = a instantiate s match {
     case Left(ac) => b instantiate s match {
