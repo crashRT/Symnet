@@ -210,7 +210,22 @@ class IPRewriter(name: String,
     looper(0)
   }
 
-  def buildFullIntructions(inputspec: String, port: Int) = inputspec match {
+  /**
+   * This rewriter reads and writes IPv4 headers only.  An IPv6 packet leaves
+   * untouched by the rule's forward output, as it would through an IPv4 NAT.
+   * Without this the IPv6 packet failed on the IPv4 field reads, so the model
+   * dropped traffic that the network actually forwards.
+   */
+  private def ipv4Only(fwPort: String, ipv4Instructions: Instruction): Instruction =
+    IfIPVersion6(Forward(outputPortName(fwPort.toInt)), ipv4Instructions)
+
+  def buildFullIntructions(inputspec: String, port: Int): Instruction = inputspec match {
+    case IPRewriter.keepPattern(fwPort, _) => ipv4Only(fwPort, buildIPv4Instructions(inputspec, port))
+    case IPRewriter.rewritePattern(_, _, _, _, fwPort, _) => ipv4Only(fwPort, buildIPv4Instructions(inputspec, port))
+    case _ => buildIPv4Instructions(inputspec, port)
+  }
+
+  private def buildIPv4Instructions(inputspec: String, port: Int): Instruction = inputspec match {
     case IPRewriter.keepPattern(fwPort, rpPort) => {
       installInstructions += (inputPortName(port) -> installRulesForKeep(port * 2, fwPort.toInt, rpPort.toInt))
       lastCheck += 2

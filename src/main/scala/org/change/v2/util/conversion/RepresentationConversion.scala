@@ -47,4 +47,33 @@ object RepresentationConversion {
     (lowerBound - IP_OFFSET, upperBound - IP_OFFSET)
   }
 
+
+  /**
+   * IPv6 address as its unsigned 128-bit value.  Unlike IPv4 there is no
+   * 2^31 shift: values go to Z3 through mkNumeral, which keeps them exact.
+   */
+  def ipv6ToNumber(ip: String): BigInt =
+    BigInt(1, java.net.InetAddress.getByName(requireIPv6(ip)).getAddress)
+
+  def ipv6AndMaskToInterval(ip: String, mask: String): (BigInt, BigInt) = {
+    val len = Integer.parseInt(mask)
+    if (len < 0 || len > 128)
+      throw new IllegalArgumentException(s"IPv6 prefix length out of range: $ip/$mask")
+    val hostBits = (BigInt(1) << (128 - len)) - 1
+    val value = ipv6ToNumber(ip)
+    val lower = value & ~hostBits & ((BigInt(1) << 128) - 1)
+    (lower, lower | hostBits)
+  }
+
+  def numberToIPv6(value: BigInt): String = {
+    val bytes = value.toByteArray.reverse.padTo(16, 0.toByte).take(16).reverse
+    java.net.InetAddress.getByAddress(bytes).getHostAddress
+  }
+
+  private def requireIPv6(ip: String): String = {
+    if (!ip.contains(":") || ip.exists(c => !(c.isDigit || "abcdefABCDEF:".contains(c))))
+      throw new IllegalArgumentException(s"Not an IPv6 address: $ip")
+    ip
+  }
+
 }

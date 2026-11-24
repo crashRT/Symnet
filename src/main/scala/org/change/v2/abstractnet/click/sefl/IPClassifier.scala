@@ -38,54 +38,64 @@ class IPClassifier(name: String,
    * @param condition
    * @return
    */
-  private def conditionToConstraint(condition: String): Instruction =
+  private def conditionToConstraint(condition: String): IPClassifier.Atom =
     IPClassifier.valueListConstraint(name, condition) match {
-      case Some(instr) => instr
+      case Some(atom) => atom
       case None => singleValueConditionToConstraint(condition)
     }
 
-  private def singleValueConditionToConstraint(condition: String): Instruction = condition match {
-    case IPClassifier.color(v) => ConstrainNamedSymbol(Paint.COLOR, :==:(ConstantValue(v.toInt)))
+  import IPClassifier.{plain, ipv4Only, ipv6Only}
 
-    case IPClassifier.ipProto(v) => ConstrainRaw(IPVersion, :==:(ConstantValue(v.toInt)))
+  private def singleValueConditionToConstraint(condition: String): IPClassifier.Atom = condition match {
+    case IPClassifier.color(v) => plain(ConstrainNamedSymbol(Paint.COLOR, :==:(ConstantValue(v.toInt))))
 
-    case IPClassifier.srcHostAddr(ip) => ConstrainRaw(IPSrc, :==:(ConstantValue(ipToNumber(ip))))
-    case IPClassifier.dstHostAddr(ip) => ConstrainRaw(IPDst, :==:(ConstantValue(ipToNumber(ip))))
+    case IPClassifier.ipProto(v) => plain(ConstrainRaw(IPVersion, :==:(ConstantValue(v.toInt))))
 
-    case IPClassifier.nexthopAddr(ip) => ConstrainNamedSymbol("nexthop", :==:(ConstantValue(ipToNumber(ip))))
+    case IPClassifier.srcHostAddr(ip) => ipv4Only(ConstrainRaw(IPSrc, :==:(ConstantValue(ipToNumber(ip)))))
+    case IPClassifier.dstHostAddr(ip) => ipv4Only(ConstrainRaw(IPDst, :==:(ConstantValue(ipToNumber(ip)))))
 
-    case IPClassifier.etherSrc(macSrc) => ConstrainRaw(EtherSrc, :==:(ConstantValue(macToNumberCiscoFormat(macSrc))))
-    case IPClassifier.etherDst(macDst) => ConstrainRaw(EtherDst, :==:(ConstantValue(macToNumberCiscoFormat(macDst))))
+    case IPClassifier.nexthopAddr(ip) => plain(ConstrainNamedSymbol("nexthop", :==:(ConstantValue(ipToNumber(ip)))))
 
-    case IPClassifier.vlanTag(vlanId) => ConstrainRaw(VLANTag, :==:(ConstantValue(vlanId.toInt)))
+    case IPClassifier.etherSrc(macSrc) => plain(ConstrainRaw(EtherSrc, :==:(ConstantValue(macToNumberCiscoFormat(macSrc)))))
+    case IPClassifier.etherDst(macDst) => plain(ConstrainRaw(EtherDst, :==:(ConstantValue(macToNumberCiscoFormat(macDst)))))
+
+    case IPClassifier.vlanTag(vlanId) => plain(ConstrainRaw(VLANTag, :==:(ConstantValue(vlanId.toInt))))
 
     case IPClassifier.srcNetRange(startIp, endIp) =>
-      ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(ipToNumber(startIp))), :<=:(ConstantValue(ipToNumber(endIp)))))
+      ipv4Only(ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(ipToNumber(startIp))), :<=:(ConstantValue(ipToNumber(endIp))))))
     case IPClassifier.dstNetRange(startIp, endIp) =>
-      ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(ipToNumber(startIp))), :<=:(ConstantValue(ipToNumber(endIp)))))
+      ipv4Only(ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(ipToNumber(startIp))), :<=:(ConstantValue(ipToNumber(endIp))))))
 
     case IPClassifier.dstNetAddr(ip, mask) => {
       val (lower, upper) = ipAndMaskToInterval(ip, mask)
-      ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper))))
+      ipv4Only(ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))))
     }
     case IPClassifier.dstNetExplicitAddr(ip, mask) => {
       val (lower, upper) = ipAndExplicitMaskToInterval(ip, mask)
-      ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper))))
+      ipv4Only(ConstrainRaw(IPDst, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))))
     }
     case IPClassifier.srcNetAddr(ip, mask) => {
       val (lower, upper) = ipAndMaskToInterval(ip, mask)
-      ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper))))
+      ipv4Only(ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))))
     }
     case IPClassifier.srcNetExplicitAddr(ip, mask) => {
       val (lower, upper) = ipAndExplicitMaskToInterval(ip, mask)
-      ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper))))
+      ipv4Only(ConstrainRaw(IPSrc, :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))))
     }
 
-    case IPClassifier.srcPort(_, port) => ConstrainRaw(TcpSrc, :==:(ConstantValue(port.toInt)))
-    case IPClassifier.dstPort(_, port) => ConstrainRaw(TcpDst, :==:(ConstantValue(port.toInt)))
+    // IPv6 addresses.  The same qualifiers as IPv4; the value decides.
+    case IPClassifier.ip6Atom(direction, kind, value) =>
+      val field = if (direction == "src") IP6Src else IP6Dst
+      val constraint = (if (kind == "host") IPClassifier.ip6HostValueConstraint(value)
+        else IPClassifier.ip6NetValueConstraint(value)).getOrElse(throw new IllegalArgumentException(
+          s"IPClassifier $name: unsupported IPv6 value '$value' in condition '$condition'"))
+      ipv6Only(ConstrainRaw(field, constraint))
 
-    case IPClassifier.tcp() => ConstrainRaw(Proto, :==:(ConstantValue(TCPProto)))
-    case IPClassifier.udp() => ConstrainRaw(Proto, :==:(ConstantValue(UDPProto)))
+    case IPClassifier.srcPort(_, port) => plain(ConstrainRaw(TcpSrc, :==:(ConstantValue(port.toInt))))
+    case IPClassifier.dstPort(_, port) => plain(ConstrainRaw(TcpDst, :==:(ConstantValue(port.toInt))))
+
+    case IPClassifier.tcp() => IPClassifier.l4Protocol(TCPProto)
+    case IPClassifier.udp() => IPClassifier.l4Protocol(UDPProto)
 
     case _ => throw new IllegalArgumentException(
       s"IPClassifier $name: unsupported condition '$condition'")
@@ -127,7 +137,7 @@ class IPClassifier(name: String,
 
       def conditionsToInstruction(conds: List[String]): Instruction = {
         val cond = conds.head
-        If(conditionToConstraint(cond),
+        conditionToConstraint(cond)(
           // then branch (if condition is met)
           if (conds.length == 1)
             Forward(outputPortName(whichOne))
@@ -159,6 +169,49 @@ class IPClassifierElementBuilder(name: String)
 }
 
 object IPClassifier {
+  /**
+   * One tcpdump atom, given what to do when it matches and when it does not.
+   * An atom that reads an address of one IP version only applies to packets
+   * of that version; on the other version it simply does not match.
+   */
+  type Atom = (Instruction, Instruction) => Instruction
+
+  def plain(test: Instruction): Atom = (thenWhat, elseWhat) => If(test, thenWhat, elseWhat)
+
+  def ipv4Only(test: Instruction): Atom = (thenWhat, elseWhat) =>
+    IfIPVersion6(elseWhat, If(test, thenWhat, elseWhat))
+
+  def ipv6Only(test: Instruction): Atom = (thenWhat, elseWhat) =>
+    IfIPVersion6(If(test, thenWhat, elseWhat), elseWhat)
+
+  /** `tcp` / `udp`: IPv4 Proto or IPv6 Next Header, whichever the packet has. */
+  def l4Protocol(proto: Int): Atom = (thenWhat, elseWhat) =>
+    IfIPVersion6(
+      If(ConstrainRaw(IP6NextHeader, :==:(ConstantValue(proto))), thenWhat, elseWhat),
+      If(ConstrainRaw(Proto, :==:(ConstantValue(proto))), thenWhat, elseWhat))
+
+  /** `src|dst host|net <IPv6 value>` (value list handled separately). */
+  val ip6Atom = ("""(src|dst) (host|net) (""" + ipv6 + """(?:/[0-9]{1,3})?(?:\s*-\s*""" + ipv6 + """)?)""").r
+
+  def isIPv6Value(value: String): Boolean = value.contains(":")
+
+  def ip6HostValueConstraint(value: String): Option[FloatingConstraint] = value match {
+    case ipv6Regex() => Some(:==:(ConstantValue(ipv6ToNumber(value))))
+    case _ => None
+  }
+
+  def ip6NetValueConstraint(value: String): Option[FloatingConstraint] = value match {
+    case ipv6netmaskRegexWithGroups(ip, mask) =>
+      val (lower, upper) = ipv6AndMaskToInterval(ip, mask)
+      Some(rangeConstraint(lower, upper))
+    case ipv6IntervalRegexWithGroups(start, end) =>
+      val (lower, upper) = (ipv6ToNumber(start), ipv6ToNumber(end))
+      if (upper < lower) throw new IllegalArgumentException(s"IPv6 range end precedes start: $value")
+      Some(rangeConstraint(lower, upper))
+    case ipv6Regex() => ip6HostValueConstraint(value)
+    case _ => None
+  }
+
   // Supported condition formats.
   val conditionSeparator = """\s+(and|&&)\s+"""
 
@@ -204,7 +257,7 @@ object IPClassifier {
     .filter(_.nonEmpty)
     .toList
 
-  private def rangeConstraint(lower: Long, upper: Long): FloatingConstraint =
+  private def rangeConstraint(lower: BigInt, upper: BigInt): FloatingConstraint =
     :&:(:>=:(ConstantValue(lower)), :<=:(ConstantValue(upper)))
 
   private def netValueConstraint(value: String): Option[FloatingConstraint] = value match {
@@ -238,14 +291,23 @@ object IPClassifier {
    * value), in which case the single-value rules apply unchanged.  Throws when
    * a value in a list cannot be interpreted.
    */
-  def valueListConstraint(elementName: String, condition: String): Option[Instruction] =
+  def valueListConstraint(elementName: String, condition: String): Option[Atom] =
     condition.trim match {
       case valueListAtom(qualifier, rest) =>
         val values = valuesOf(rest)
+        val addressAtom = Set("src net", "dst net", "src host", "dst host").contains(qualifier)
+        val ipv6 = addressAtom && values.exists(isIPv6Value)
+        if (ipv6 && values.exists(v => !isIPv6Value(v)) && !values.contains("mask"))
+          throw new IllegalArgumentException(
+            s"IPClassifier $elementName: IPv4 and IPv6 values mixed in condition '$condition'")
         // `src net A mask M` is a single value containing spaces.
         if (values.length < 2 || values.contains("mask")) None
         else {
           val (field, parse): (Intable, String => Option[FloatingConstraint]) = qualifier match {
+            case "src net" if ipv6 => (IP6Src, ip6NetValueConstraint)
+            case "dst net" if ipv6 => (IP6Dst, ip6NetValueConstraint)
+            case "src host" if ipv6 => (IP6Src, ip6HostValueConstraint)
+            case "dst host" if ipv6 => (IP6Dst, ip6HostValueConstraint)
             case "src net" => (IPSrc, netValueConstraint)
             case "dst net" => (IPDst, netValueConstraint)
             case "src host" => (IPSrc, hostValueConstraint)
@@ -260,7 +322,8 @@ object IPClassifier {
             parse(value).getOrElse(throw new IllegalArgumentException(
               s"IPClassifier $elementName: unsupported value '$value' in condition '$condition'"))
           }
-          Some(ConstrainRaw(field, :||:(constraints)))
+          val test = ConstrainRaw(field, :||:(constraints))
+          Some(if (!addressAtom) plain(test) else if (ipv6) ipv6Only(test) else ipv4Only(test))
         }
       case _ => None
     }

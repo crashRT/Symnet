@@ -22,5 +22,14 @@ object Z3Util {
   }
 
   lazy val defaultSort = intSort
+
+  /** An exact integer constant of the default sort (no 32-bit truncation). */
+  def num(v: BigInt) = z3Context.mkNumeral(v.toString, defaultSort)
+
+  /** Clamp a value to the Long range (for the interval-based `asSet` views). */
+  def clampLong(v: BigInt): Long =
+    if (v > BigInt(Long.MaxValue)) Long.MaxValue
+    else if (v < BigInt(Long.MinValue)) Long.MinValue
+    else v.toLong
   lazy val bv32Sort = z3Context.mkBVSort(32)
 }

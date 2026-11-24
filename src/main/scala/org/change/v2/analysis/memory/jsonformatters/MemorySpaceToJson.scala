@@ -29,8 +29,8 @@ object ConcreteMemorySpaceToJson extends DefaultJsonProtocol {
     override def write(obj: MemorySpace): JsValue = JsArray(
       obj.rawObjects.map(tv =>
         JsObject(tv._1.toString -> JsObject(
-          "initial" -> JsNumber(obj.exampleFor(tv._2.initialValue.get).getOrElse(-1)),
-          "final" -> JsNumber(obj.exampleFor(tv._2.initialValue.get).getOrElse(-1))
+          "initial" -> JsNumber(obj.exampleBigFor(tv._2.initialValue.get).getOrElse(BigInt(-1))),
+          "final" -> JsNumber(obj.exampleBigFor(tv._2.initialValue.get).getOrElse(BigInt(-1)))
         ))).toList
     )
   }

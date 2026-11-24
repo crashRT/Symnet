@@ -74,6 +74,27 @@ package object  canonicalnames {
   val IPDstOffset = 128
   val IPDst = L3Tag + IPDstOffset
 
+  //IPv6 header offsets (RFC 8200).  Version shares L3+0 with IPv4, which is
+  //what IfIPVersion6 dispatches on.  Extension headers are not modelled: Next
+  //Header names the L4 protocol directly.
+  val IP6TrafficClassOffset = 4
+  val IP6TrafficClass = L3Tag + IP6TrafficClassOffset
+  val IP6FlowLabelOffset = 12
+  val IP6FlowLabel = L3Tag + IP6FlowLabelOffset
+  val IP6PayloadLengthOffset = 32
+  val IP6PayloadLength = L3Tag + IP6PayloadLengthOffset
+  val IP6NextHeaderOffset = 48
+  val IP6NextHeader = L3Tag + IP6NextHeaderOffset
+  val IP6HopLimitOffset = 56
+  val IP6HopLimit = L3Tag + IP6HopLimitOffset
+  val IP6SrcOffset = 64
+  val IP6Src = L3Tag + IP6SrcOffset
+  val IP6DstOffset = 192
+  val IP6Dst = L3Tag + IP6DstOffset
+  val IP6HeaderLength = 320
+
+  val EtherProtoIP6 = 34525
+
   // Protocol id numbers
   val ICMPProto = 1
   val UDPProto = 17

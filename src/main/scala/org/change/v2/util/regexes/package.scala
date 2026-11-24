@@ -15,6 +15,14 @@ package object regexes {
   val ipv4netmask = """[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}"""
   val ipv4netmaskRegex = ipv4netmask.r
 
+  // IPv6 in the textual forms the Click grammar can carry: full or
+  // compressed hex groups.  Mosaic emits the exploded form because the Click
+  // lexer reads `::` as the declaration operator.
+  val ipv6 = """[0-9a-fA-F]{0,4}(?::[0-9a-fA-F]{0,4}){2,7}"""
+  val ipv6Regex = ipv6.r
+  val ipv6IntervalRegexWithGroups = s"($ipv6)\\s*-\\s*($ipv6)".r
+  val ipv6netmaskRegexWithGroups = s"($ipv6)/([0-9]{1,3})".r
+
   val number = """\d+"""
   val numberRegex = number.r
 

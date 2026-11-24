@@ -42,60 +42,60 @@ object No extends Constraint {
   override def z3Constrain(subject: Z3AST): Z3AST = subject
 }
 
-case class LT(v: Long) extends Constraint {
+case class LT(v: BigInt) extends Constraint {
   override def asSet(valueType: NumericType): List[(Long, Long)] = {
-    List((valueType.min, Math.min(v-1, valueType.max)))
+    List((valueType.min, Z3Util.clampLong(v-1).min(valueType.max)))
   }
 
   override def z3Constrain(ast: Z3AST): Z3AST =
-    Z3Util.z3Context.mkLT(ast, Z3Util.z3Context.mkInt(v.asInstanceOf[Int], Z3Util.defaultSort))
+    Z3Util.z3Context.mkLT(ast, Z3Util.num(v))
 }
 
-case class LTE(v: Long) extends Constraint {
+case class LTE(v: BigInt) extends Constraint {
   override def asSet(valueType: NumericType): List[(Long, Long)] = {
-    List((valueType.min, Math.min(v, valueType.max)))
+    List((valueType.min, Z3Util.clampLong(v).min(valueType.max)))
   }
 
   override def z3Constrain(ast: Z3AST): Z3AST =
-    Z3Util.z3Context.mkLE(ast, Z3Util.z3Context.mkInt(v.asInstanceOf[Int], Z3Util.defaultSort))
+    Z3Util.z3Context.mkLE(ast, Z3Util.num(v))
 }
 
-case class GT(v: Long) extends Constraint {
+case class GT(v: BigInt) extends Constraint {
   override def asSet(valueType: NumericType): List[(Long, Long)] = {
-    List((Math.max(v+1, valueType.min), valueType.max))
+    List((Z3Util.clampLong(v+1).max(valueType.min), valueType.max))
   }
 
   override def z3Constrain(ast: Z3AST): Z3AST =
-    Z3Util.z3Context.mkGT(ast, Z3Util.z3Context.mkInt(v.asInstanceOf[Int], Z3Util.defaultSort))
+    Z3Util.z3Context.mkGT(ast, Z3Util.num(v))
 }
 
-case class GTE(v: Long) extends Constraint{
+case class GTE(v: BigInt) extends Constraint{
   override def asSet(valueType: NumericType): List[(Long, Long)] = {
-    List((Math.max(v, valueType.min), valueType.max))
+    List((Z3Util.clampLong(v).max(valueType.min), valueType.max))
   }
 
   override def z3Constrain(ast: Z3AST): Z3AST =
-    Z3Util.z3Context.mkGE(ast, Z3Util.z3Context.mkInt(v.asInstanceOf[Int], Z3Util.defaultSort))
+    Z3Util.z3Context.mkGE(ast, Z3Util.num(v))
 }
 
-case class E(v: Long) extends Constraint{
+case class E(v: BigInt) extends Constraint{
   override def asSet(valueType: NumericType): List[(Long, Long)] =
-    if (valueType.min <= v && v <= valueType.max) List((v,v))
+    if (valueType.min <= v && v <= valueType.max) List((v.toLong,v.toLong))
     else Nil
 
   override def z3Constrain(ast: Z3AST): Z3AST =
-    Z3Util.z3Context.mkEq(ast, Z3Util.z3Context.mkInt(v.asInstanceOf[Int], Z3Util.defaultSort))
+    Z3Util.z3Context.mkEq(ast, Z3Util.num(v))
 }
 
-case class Range(v1: Long, v2: Long) extends Constraint {
+case class Range(v1: BigInt, v2: BigInt) extends Constraint {
   override def asSet(valueType: NumericType): List[(Long, Long)] = {
-    List((Math.max(v1, valueType.min), Math.min(v2, valueType.max)))
+    List((Z3Util.clampLong(v1).max(valueType.min), Z3Util.clampLong(v2).min(valueType.max)))
   }
 
   override def z3Constrain(ast: Z3AST): Z3AST =
     Z3Util.z3Context.mkAnd(
-      Z3Util.z3Context.mkGE(ast, Z3Util.z3Context.mkInt(v1.asInstanceOf[Int], Z3Util.defaultSort)),
-      Z3Util.z3Context.mkLE(ast, Z3Util.z3Context.mkInt(v2.asInstanceOf[Int], Z3Util.defaultSort)))
+      Z3Util.z3Context.mkGE(ast, Z3Util.num(v1)),
+      Z3Util.z3Context.mkLE(ast, Z3Util.num(v2)))
 }
 
 case class OR(constraints: List[Constraint]) extends Constraint {

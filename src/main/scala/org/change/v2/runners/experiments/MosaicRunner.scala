@@ -4,18 +4,28 @@ import java.io.{File, FilenameFilter}
 import org.change.parser.clickfile.ClickToAbstractNetwork
 import org.change.parser.interclicklinks.InterClickLinksParser
 import org.change.v2.analysis.memory.jsonformatters.StreamingExecutionContextToJson
+import org.change.v2.analysis.memory.State
 import org.change.v2.executor.clickabstractnetwork.ClickExecutionContext
 
 object MosaicRunner {
   def main(args: Array[String]): Unit = {
     if (args.length < 2) {
-      println("Usage: sbt \"runMain org.change.v2.runners.experiments.MosaicRunner <folder_path> <start_port> [output_file]\"")
+      println("Usage: sbt \"runMain org.change.v2.runners.experiments.MosaicRunner <folder_path> <start_port> [output_file] [ipv4|ipv6]\"")
       sys.exit(1)
     }
 
     val folderPath = args(0)
     val startPort = args(1)
     val outputPath = if (args.length >= 3) args(2) else "out.json"
+    // The injected packet: a symbolic IPv4 packet (default) or IPv6 packet.
+    val ipVersion = if (args.length >= 4) args(3) else "ipv4"
+    val initialState: State = ipVersion match {
+      case "ipv4" => State.bigBang
+      case "ipv6" => State.bigBang6
+      case other =>
+        println(s"Error: unknown IP version '$other' (expected ipv4 or ipv6)")
+        sys.exit(1)
+    }
 
     val clicksFolder = new File(folderPath)
     if (!clicksFolder.exists() || !clicksFolder.isDirectory) {
@@ -44,7 +54,8 @@ object MosaicRunner {
     val ctx = ClickExecutionContext.buildAggregated(
       clicks.map(ClickToAbstractNetwork.buildConfig(_, prefixedElements = true)),
       links,
-      startElems = Some(List(startTuple))
+      startElems = Some(List(startTuple)),
+      initialState = initialState
     )
 
     val outputFile = new File(outputPath)

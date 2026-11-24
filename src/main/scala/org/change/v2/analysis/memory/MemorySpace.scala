@@ -225,12 +225,12 @@ case class MemorySpace(val symbols: Map[String, MemoryObject] = Map.empty,
   def verboselyPrintObject[A](kv: (A, MemoryObject)): String = (kv._1 ->
     ("Crt:" + kv._2.value +
       "Example:" + (kv._2.value match {
-      case Some(v) => exampleFor(v).toString
+      case Some(v) => exampleBigFor(v).toString
       case _ => "-"
     })  +
       "Initital: " + kv._2.initialValue +
       "Example:" + (kv._2.initialValue match {
-      case Some(v) => exampleFor(v).toString
+      case Some(v) => exampleBigFor(v).toString
       case _ => "-"
     }))).toString()
 
@@ -268,9 +268,19 @@ case class MemorySpace(val symbols: Map[String, MemoryObject] = Map.empty,
 
   def exampleFor(a: Int): Option[Int] = resolveBy(a, rawObjects).flatMap(exampleFor(_))
 
-  def exampleFor(v: Value): Option[Int] = buildModel.flatMap(m => {
-    val e = m.evalAs[Int](v.e.toZ3()._1)
-    e
+  def exampleFor(v: Value): Option[Int] = exampleBigFor(v).filter(_.isValidInt).map(_.toInt)
+
+  def exampleBigFor(id: String): Option[BigInt] = resolveBy(id, symbols).flatMap(exampleBigFor(_))
+
+  def exampleBigFor(a: Int): Option[BigInt] = resolveBy(a, rawObjects).flatMap(exampleBigFor(_))
+
+  /**
+   * Example value of any width.  Z3 prints an integer numeral as `123` or
+   * `(- 123)`; reading the text keeps 128-bit values exact, where
+   * `evalAs[Int]` failed on anything wider than 32 bits.
+   */
+  def exampleBigFor(v: Value): Option[BigInt] = buildModel.flatMap(m => {
+    m.eval(v.e.toZ3()._1, true).flatMap(ast => MemorySpace.parseZ3Integer(ast.toString))
   })
 
   def concretizeSymbols = (rawObjects.map(kv => kv._1.toString -> kv._2)).map { kv =>
@@ -279,6 +289,15 @@ case class MemorySpace(val symbols: Map[String, MemoryObject] = Map.empty,
 }
 
 object MemorySpace {
+  private val z3Negative = """\(\s*-\s*(\d+)\s*\)""".r
+  private val z3Natural = """(\d+)""".r
+
+  def parseZ3Integer(text: String): Option[BigInt] = text.trim match {
+    case z3Natural(n) => Some(BigInt(n))
+    case z3Negative(n) => Some(-BigInt(n))
+    case _ => None
+  }
+
   /**
    * Empty memory.
    * @return
